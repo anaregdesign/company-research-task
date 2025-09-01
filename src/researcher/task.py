@@ -47,7 +47,16 @@ class CompanyBasic(BaseModel):
     ticker_code: Optional[int] = Field(None, ge=1000, le=9999, description="証券コード（4桁。非上場はNone）")
     market: Optional[Literal["Prime", "Standard", "Growth", "Non-listed"]] = Field(None, description="市場区分")
     corporate_number: Optional[str] = Field(None, description="法人番号（13桁）")
-    headquarters_pref: Optional[str] = Field(None, description="本社所在地（都道府県）")
+    # 変更: 本社所在地を都道府県Literalで強制
+    headquarters_pref: Optional[Literal[
+        "北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県",
+        "茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県",
+        "新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県",
+        "静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県",
+        "奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県",
+        "徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県",
+        "熊本県","大分県","宮崎県","鹿児島県","沖縄県"
+    ]] = Field(None, description="本社所在地（都道府県）")
     founded_year: Optional[int] = Field(None, ge=1600, le=2100, description="設立年")
     capital_yen: Optional[int] = Field(None, ge=0, description="資本金（円）")
     employees_consolidated: Optional[int] = Field(None, ge=0, description="従業員数（連結）")
@@ -75,10 +84,10 @@ class FinancialRecord(BaseModel):
     # --- BS ---
     total_assets_yen: Optional[float] = Field(None, ge=0, description="総資産（円）")
     net_assets_yen: Optional[float] = Field(None, ge=0, description="純資産（円）")
-    equity_ratio: Optional[float] = Field(None, ge=0, le=100, description="自己資本比率（%）")
+    equity_ratio: Optional[float] = Field(None, ge=0.0, le=1.0, description="自己資本比率（0〜1）")
     interest_bearing_debt_yen: Optional[float] = Field(None, ge=0, description="有利子負債（円）")
-    roe: Optional[float] = Field(None, ge=-100, le=100, description="ROE（%）")
-    roa: Optional[float] = Field(None, ge=-100, le=100, description="ROA（%）")
+    roe: Optional[float] = Field(None, ge=-1.0, le=1.0, description="ROE（0〜1のfloat、負値可。%表記からは0-1に変換）")
+    roa: Optional[float] = Field(None, ge=-1.0, le=1.0, description="ROA（0〜1のfloat、負値可。%表記からは0-1に変換）")
 
     # --- セグメント（Dict禁止→配列へ） ---
     segment_revenue_ratio: List[SegmentRatio] = Field(
@@ -142,12 +151,21 @@ class GroupCompany(BaseModel):
     relation_type: Optional[Literal["subsidiary", "affiliate", "joint_venture", "other"]] = Field(
         None, description="対対象企業との関係（subsidiary=子会社, affiliate=関連会社, joint_venture=JV, other=その他）"
     )
-    ownership_ratio: Optional[float] = Field(None, ge=0, le=100, description="持株比率（%）")
+    ownership_ratio: Optional[float] = Field(None, ge=0.0, le=1.0, description="持株比率（0〜1）")
     is_listed: Optional[bool] = Field(None, description="上場の有無（True=上場, False=非上場, None=不明）")
     ticker_code: Optional[int] = Field(None, ge=1000, le=9999, description="証券コード（4桁。上場でない場合はNone）")
     market: Optional[Literal["Prime", "Standard", "Growth", "Non-listed"]] = Field(None, description="市場区分")
     corporate_number: Optional[str] = Field(None, description="法人番号（13桁）")
-    headquarters_pref: Optional[str] = Field(None, description="本社所在地（都道府県）")
+    # 変更: 本社所在地を都道府県Literalで強制
+    headquarters_pref: Optional[Literal[
+        "北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県",
+        "茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県",
+        "新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県",
+        "静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県",
+        "奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県",
+        "徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県",
+        "熊本県","大分県","宮崎県","鹿児島県","沖縄県"
+    ]] = Field(None, description="本社所在地（都道府県、Literalで固定）")
     founded_year: Optional[int] = Field(None, ge=1600, le=2100, description="設立年")
     capital_yen: Optional[int] = Field(None, ge=0, description="資本金（円）")
     employees: Optional[int] = Field(None, ge=0, description="従業員数（単体）")
