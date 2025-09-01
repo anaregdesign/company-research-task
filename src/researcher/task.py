@@ -39,11 +39,12 @@ class Executive(BaseModel):
     responsibility: Optional[str] = Field(None, description="担当範囲。経営企画、IT戦略、研究開発、人事などの主要な管掌領域。")
     start_date: Optional[str] = Field(None, description="着任日（YYYY-MM-DD）")
     end_date: Optional[str] = Field(None, description="退任日（YYYY-MM-DD）")
-    source_url: Optional[str] = Field(None, description="役員情報の根拠URL")
+    source_url: Optional[str] = Field(None, description="役員情報の根拠URL（必ず http:// または https:// で始まる URL を格納してください。URL以外の文字列を入れないこと。）")
 
 
 class CompanyBasic(BaseModel):
-    company_name: str = Field(..., description="商号（正式名）")
+    # 変更: company_name の説明を明確化（会社名のみを格納）
+    company_name: str = Field(..., description="商号（正式名。会社名のみを記載してください。英語表記や括弧での補足は含めない）")
     ticker_code: Optional[int] = Field(None, ge=1000, le=9999, description="証券コード（4桁。非上場はNone）")
     market: Optional[Literal["Prime", "Standard", "Growth", "Non-listed"]] = Field(None, description="市場区分")
     corporate_number: Optional[str] = Field(None, description="法人番号（13桁）")
@@ -63,7 +64,7 @@ class CompanyBasic(BaseModel):
     executives: List[Executive] = Field(default_factory=list, description="主要役員")
     accounting_standard: Optional[Literal["JGAAP", "IFRS", "USGAAP"]] = Field(None, description="会計基準")
     fiscal_year_start_month: Optional[int] = Field(None, ge=1, le=12, description="期首月（例: 4=4月）")
-    source_url: Optional[str] = Field(None, description="会社概要の根拠URL")
+    source_url: Optional[str] = Field(None, description="会社概要の根拠URL（必ず http:// または https:// で始まる URL を格納してください。URL以外の文字列を入れないこと。）")
 
 
 # ========== 2) 財務 ==========
@@ -98,12 +99,12 @@ class FinancialRecord(BaseModel):
     )
 
     notes: Optional[str] = Field(None, description="補足（IFRS移行、特殊要因など）")
-    source_url: Optional[str] = Field(None, description="財務データの根拠URL")
+    source_url: Optional[str] = Field(None, description="財務データの根拠URL（必ず http:// または https:// で始まる URL を格納してください。URL以外の文字列を入れないこと。）")
 
 
 class Financials(BaseModel):
     records: List[FinancialRecord] = Field(default_factory=list, description="直近3年程度の財務レコード")
-    source_url: Optional[str] = Field(None, description="財務情報全体の参照URL")
+    source_url: Optional[str] = Field(None, description="財務情報全体の参照URL（必ず http:// または https:// で始まる URL を格納してください。URL以外の文字列を入れないこと。）")
     last_verified_at: Optional[str] = Field(None, description="最終検証日（YYYY-MM-DD）")
 
 
@@ -114,7 +115,7 @@ class OrgSignal(BaseModel):
     )
     title: str = Field(..., description="イベント概要")
     announced_date: Optional[str] = Field(None, description="発表日（YYYY-MM-DD）")
-    source_url: Optional[str] = Field(None, description="根拠URL")
+    source_url: Optional[str] = Field(None, description="根拠URL（必ず http:// または https:// で始まる URL を格納してください。URL以外の文字列を入れないこと。）")
 
 
 # ========== 4) 広報・SNS ==========
@@ -127,13 +128,13 @@ class SocialAccount(BaseModel):
     followers: Optional[int] = Field(None, ge=0, description="フォロワー数")
     last_post_date: Optional[str] = Field(None, description="最終投稿日（YYYY-MM-DD）")
     active: Optional[bool] = Field(None, description="直近運用中か")
-    source_url: Optional[str] = Field(None, description="根拠URL")
+    source_url: Optional[str] = Field(None, description="根拠URL（必ず http:// または https:// で始まる URL を格納してください。URL以外の文字列を入れないこと。）")
 
 
 class Communications(BaseModel):
     owned_media_urls: List[str] = Field(default_factory=list, description="コーポレート/IR等の主要URL（文字列）")
     social_accounts: List[SocialAccount] = Field(default_factory=list, description="運用SNSアカウント")
-    source_url: Optional[str] = Field(None, description="広報情報の根拠URL")
+    source_url: Optional[str] = Field(None, description="広報情報の根拠URL（必ず http:// または https:// で始まる URL を格納してください。URL以外の文字列を入れないこと。）")
     last_verified_at: Optional[str] = Field(None, description="検証日（YYYY-MM-DD）")
 
 
@@ -142,7 +143,7 @@ class Competitor(BaseModel):
     name: str = Field(..., description="競合企業名")
     areas: List[str] = Field(default_factory=list, description="競合領域（例: EC, 決済, 広告）")
     notes: Optional[str] = Field(None, description="競合領域に関する解説")
-    source_url: Optional[str] = Field(None, description="根拠URL")
+    source_url: Optional[str] = Field(None, description="根拠URL（必ず http:// または https:// で始まる URL を格納してください。URL以外の文字列を入れないこと。）")
 
 
 # 新規: グループ会社・子会社モデル（上場/非上場どちらも扱う）
@@ -171,7 +172,7 @@ class GroupCompany(BaseModel):
     employees: Optional[int] = Field(None, ge=0, description="従業員数（単体）")
     business_summary: Optional[str] = Field(None, description="事業内容の要約")
     notes: Optional[str] = Field(None, description="補足（持株構成、主要顧客、事業統合状況など）")
-    source_url: Optional[str] = Field(None, description="グループ会社情報の根拠URL（会社HP/会社案内/登記情報等）")
+    source_url: Optional[str] = Field(None, description="グループ会社情報の根拠URL（会社HP/会社案内/登記情報等）。必ず http:// または https:// で始まる URL を格納してください。URL以外の文字列を入れないこと。")
 
 
 # ========== ルート ==========
@@ -186,7 +187,7 @@ class CompanyProfile(BaseModel):
         default_factory=list,
         description="グループ会社・子会社の一覧。上場・非上場を問わず、持株比率や上場情報、簡単な事業要約、根拠URLを含めること。"
     )
-    source_url: Optional[str] = Field(None, description="企業全体プロフィールの参照URL")
+    source_url: Optional[str] = Field(None, description="企業全体プロフィールの参照URL（必ず http:// または https:// で始まる URL を格納してください。URL以外の文字列を入れないこと。）")
     last_verified_at: Optional[str] = Field(None, description="全体の最終検証日（YYYY-MM-DD）")
     confidence: Optional[float] = Field(None, ge=0.0, le=1.0, description="全体データの確からしさ (0〜1)")
 
