@@ -47,7 +47,7 @@ class CompanyBasic(BaseModel):
     ticker_code: Optional[int] = Field(None, ge=1000, le=9999, description="証券コード（4桁。非上場はNone）")
     market: Optional[Literal["Prime", "Standard", "Growth", "Non-listed"]] = Field(None, description="市場区分")
     corporate_number: Optional[str] = Field(None, description="法人番号（13桁）")
-    # 変更: 本社所在地を都道府県Literalで強制
+    # 変更: 本社所在地を都道府県Literalで強制（海外等は 'Other'、不明は None）
     headquarters_pref: Optional[Literal[
         "北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県",
         "茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県",
@@ -55,8 +55,8 @@ class CompanyBasic(BaseModel):
         "静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県",
         "奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県",
         "徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県",
-        "熊本県","大分県","宮崎県","鹿児島県","沖縄県"
-    ]] = Field(None, description="本社所在地（都道府県）")
+        "熊本県","大分県","宮崎県","鹿児島県","沖縄県","Other"
+    ]] = Field(None, description="本社所在地（都道府県。海外等は 'Other'、不明は None）")
     founded_year: Optional[int] = Field(None, ge=1600, le=2100, description="設立年")
     capital_yen: Optional[int] = Field(None, ge=0, description="資本金（円）")
     employees_consolidated: Optional[int] = Field(None, ge=0, description="従業員数（連結）")
@@ -156,7 +156,7 @@ class GroupCompany(BaseModel):
     ticker_code: Optional[int] = Field(None, ge=1000, le=9999, description="証券コード（4桁。上場でない場合はNone）")
     market: Optional[Literal["Prime", "Standard", "Growth", "Non-listed"]] = Field(None, description="市場区分")
     corporate_number: Optional[str] = Field(None, description="法人番号（13桁）")
-    # 変更: 本社所在地を都道府県Literalで強制
+    # 変更: 本社所在地を都道府県Literalで強制（海外等は 'Other'、不明は None）
     headquarters_pref: Optional[Literal[
         "北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県",
         "茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県",
@@ -164,8 +164,8 @@ class GroupCompany(BaseModel):
         "静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県",
         "奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県",
         "徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県",
-        "熊本県","大分県","宮崎県","鹿児島県","沖縄県"
-    ]] = Field(None, description="本社所在地（都道府県、Literalで固定）")
+        "熊本県","大分県","宮崎県","鹿児島県","沖縄県","Other"
+    ]] = Field(None, description="本社所在地（都道府県。海外等は 'Other'、不明は None）")
     founded_year: Optional[int] = Field(None, ge=1600, le=2100, description="設立年")
     capital_yen: Optional[int] = Field(None, ge=0, description="資本金（円）")
     employees: Optional[int] = Field(None, ge=0, description="従業員数（単体）")
@@ -193,37 +193,31 @@ class CompanyProfile(BaseModel):
 
 task = PreparedTask(
     instructions="""
-あなたは日本企業の公開情報を調査するアシスタントです。  
-入力として与えられる企業名について、Websearchツールを利用して公開情報を調査し、  
-指定されたスキーマ（CompanyProfile）に従って構造化JSONを出力してください。  
+あなたは日本企業の公開情報を調査するアシスタントです。入力として与えられる企業名について、公開ソースを検索して事実に基づく情報を収集し、指定の Pydantic スキーマ（CompanyProfile）に厳密に従う構造化JSONを出力してください。
 
-### 注意事項
-- 入力された企業名が複数の企業に該当する場合は、最も有名で代表的な日本企業を優先して調査してください。  
-  （例: 「パナソニック」と入力された場合は、家電大手の「パナソニックホールディングス株式会社」を対象とする）  
-- ただし、企業名が明確に限定されている場合（例: 「パナソニック インダストリー株式会社」）はその企業を対象にしてください。  
+収集対象（優先順）
+1. 公式コーポレートサイト（会社概要、役員一覧、会社案内）
+2. IR（決算短信、有価証券報告書、統合報告書、決算説明資料）
+3. TDnet / EDINET 等の開示資料
+4. 公式プレスリリース
+5. 公式に認められたSNS（会社公式ページで明示されているもの）
 
-### 調査対象
-- 公式コーポレートサイト
-- IRページ（決算短信、有価証券報告書、統合報告書）
-- TDnet / EDINETの開示情報
-- プレスリリース
-- 公式SNSアカウント（X, LinkedIn, YouTube, Instagram など）
+出力ルール（必ず厳守）
+- 出力は CompanyProfile モデルに完全に一致する構造化JSON のみとし、余計な解説文や注釈は含めないこと。JSON がモデルでバリデート可能であることを前提とする。
+- 金額はすべて「円」に換算して格納する（IRで百万円・億円表記がある場合は必ず換算する）。
+- 比率はすべて 0.0〜1.0 の float で表現する（例: 100%→1.0、15%→0.15）。ROE/ROA は符号を含め -1.0〜1.0 の float とする。
+- FiscalPeriod は可能な限り fiscal_year、quarter、period_start、period_end を埋める。取得できない項目は null にする。
+- 財務データは少なくとも直近3年分の年次決算と、可能であれば最新の四半期決算を含める（存在しない場合は省略可）。
+- 役員は氏名と役職を最低限含める。着任日・退任日は明確な根拠がある場合のみ記載する。
+- セグメントは `segment_revenue_ratio`（各 ratio は 0.0〜1.0）と `segment_revenue_yen`（円）で表す。
+- グループ会社・子会社情報は `group_companies` に格納する。上場・非上場いずれでも可。非上場で情報が少ない場合は、少なくとも `name`、`ownership_ratio`（0.0〜1.0）、`is_listed`、簡潔な `business_summary`、`source_url` を優先して埋める。推測は禁止。
+- 本社所在地は日本の47都道府県名を使用する。海外等で都道府県に該当しない場合は文字列 "Other" を使用し、不明は null を用いる。
+- SNS は公式アカウントのみを対象とし、会社HP等でのリンクや公式表記を根拠とすること。
+- 各主要項目（財務、役員、グループ会社、SNS 等）に対して可能な限り `source_url` を付与すること。
+- 見つからない情報は null または空リストにする。推測・創作・重複除外のための暗黙の前提は用いない。
 
-### 出力ルール
-- 金額はすべて「円」に換算して格納してください。IRで百万円・億円単位の数値が出ている場合は必ず換算すること。
-- FiscalPeriod には会計年度・四半期・開始日・終了日を可能な限り入力すること。
-- FiscalPeriod について、会計年度・四半期別、それぞれ別に取得できる場合は両方取得すること。
-- 可能な限り `source_url` を埋めてください。根拠となるページ（IR資料PDF、会社HP、プレスリリース、SNS公式URLなど）。
-- 不明な項目は `null` または空リストにしてください。推測や創作は禁止です。
-- 財務データは直近3年分の年度決算と最新の四半期決算を含めてください。
-- 役員については氏名・役職を最低限含め、判明していれば着任日・退任日も入れてください。
-- SNSは公式アカウントのみを対象にしてください。  
-
-### 入力
-企業名（例：「トヨタ自動車株式会社」）
-
-### 出力
-CompanyProfile モデルに従った構造化JSON。
+入力: 企業名（例: "トヨタ自動車株式会社"）
+出力: CompanyProfile モデルに従った構造化JSON（Pydantic で検証可能な形式）
     """,
     response_format=CompanyProfile,
     api_kwargs={
